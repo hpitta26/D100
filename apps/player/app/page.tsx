@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FaDiceD20, FaUserCircle } from "react-icons/fa";
+import { API_URL } from "@/lib/api";
 
 /** ---------- Types ---------- */
 type GameStatus = "waiting" | "in_progress" | "finished";
@@ -128,9 +130,15 @@ function StatusPill({ status }: { status: GameStatus }) {
 
 /** ---------- Main Page ---------- */
 export default function LandingPage() {
+  const router = useRouter();
+  
   const [tab, setTab] = useState<"your" | "spectate">("your");
   const [friendQuery, setFriendQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // user menu
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   // modal form
   const [newGame, setNewGame] = useState("Catan");
@@ -146,19 +154,49 @@ export default function LandingPage() {
   const onlineCount = useMemo(() => mockFriends.filter((f) => f.online).length, []);
   const totalGamesPlayed = mockTotalGamesPlayed;
 
-  // basic escape key handler for modal
+  // close modals / menus with ESC
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setShowCreateModal(false);
+      if (e.key === "Escape") {
+        setShowCreateModal(false);
+        setUserMenuOpen(false);
+      }
     }
-    if (showCreateModal) window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [showCreateModal]);
+  }, []);
+
+  // click outside to close user menu
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    if (userMenuOpen) document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [userMenuOpen]);
+
+  async function handleLogout() {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // ignore; we'll still route to login
+    } finally {
+      setUserMenuOpen(false);
+      router.replace("/login");
+      router.refresh();
+    }
+  }
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-gradient-to-b from-zinc-50 to-zinc-100 text-zinc-900 dark:from-zinc-950 dark:to-zinc-900 dark:text-zinc-100">
       {/* Navbar */}
-      <nav className="flex h-14 items-center justify-between gap-4 border-b border-black/5 bg-white/60 px-4 backdrop-blur dark:border-white/10 dark:bg-zinc-900/60">
+      <nav className="relative z-40 flex h-14 items-center justify-between gap-4 border-b border-black/5 bg-white/60 px-4 backdrop-blur dark:border-white/10 dark:bg-zinc-900/60">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
             <FaDiceD20 className="h-5.5 w-5.5" aria-label="D20 logo" />
@@ -173,8 +211,43 @@ export default function LandingPage() {
           <button className="rounded-lg px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer" aria-label="Docs">
             Docs
           </button>
-          <div className="ml-2 flex items-center gap-2 rounded-full bg-zinc-100 p-1.5 text-sm dark:bg-zinc-800 cursor-pointer" aria-label="User menu">
-            <FaUserCircle className="h-6 w-6 text-zinc-600 dark:text-zinc-300" aria-label="User avatar" />
+          {/* User dropdown */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setUserMenuOpen((v) => !v)}
+              className="ml-2 flex items-center gap-2 rounded-full bg-zinc-100 p-1.5 text-sm dark:bg-zinc-800 cursor-pointer"
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+              aria-label="User menu"
+            >
+              <FaUserCircle className="h-6 w-6 text-zinc-600 dark:text-zinc-300" />
+            </button>
+
+            {userMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 mt-2 w-40 overflow-hidden rounded-xl border border-black/10 bg-white py-1 text-sm shadow-lg dark:border-white/10 dark:bg-zinc-900"
+              >
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    // Future: push to /profile
+                    setUserMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                >
+                  Profile
+                </button>
+                <div className="my-1 h-px bg-black/10 dark:bg-white/10" />
+                <button
+                  role="menuitem"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-900/20"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </nav>
