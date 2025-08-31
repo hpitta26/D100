@@ -205,7 +205,7 @@ export default function LandingPage() {
           <span className="hidden text-sm text-zinc-500 sm:inline">• Play with friends</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="rounded-lg px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer" aria-label="Docs">
+          <button onClick={() => router.push("/lab")} className="rounded-lg px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer" aria-label="Docs">
             Lab
           </button>
           <button className="rounded-lg px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer" aria-label="Docs">
