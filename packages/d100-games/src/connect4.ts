@@ -1,115 +1,197 @@
-import { GameDefinition, createMatch as _createMatch } from "../../d100-core/src/runtime";
-import { GameBox, BoardObj } from "../../d100-core/src/objects";
-import { placeOnBoard, boardCells } from "../../d100-core/src/ops";
-import { GameState, Settings, ID, BoardZone, PlayerID } from "../../d100-core/src/object-types";
-
-/** Board size */
-const ROWS = 6;
-const COLS = 7;
-
-/** Settings & Box */
-const settings: Settings = {
-  id: "connect4",
-  players: { min: 2, max: 2, default: 2 },
-  hiddenInfo: false,
-  pieces: [{ kind: "disc", perPlayer: 21 }],
-};
-
-const BOARD = new BoardObj("Connect4", ROWS, COLS)
-  .withRule({ allowKinds: ["disc"] })
-  .at("center");
-
-const box = new GameBox(settings).addBoard(BOARD);
-
-/** Helpers */
-function lowestOpenRow(board: BoardZone, col: number): number | null {
-  for (let r = ROWS - 1; r >= 0; r--) {
-    const idx = r * COLS + col;
-    if (!board.cells[idx]) return r;
+// packages/d100-games/src/connect4.ts
+import {
+    GameState,
+    PlayerID,
+    BoardZone,
+    Control,
+    ID,
+    Settings,
+  } from "../../d100-core/src/object-types";
+  import {
+    GameDefinition,
+    createMatch as baseCreate,
+  } from "../../d100-core/src/runtime";
+  import { GameBox } from "../../d100-core/src/objects";
+  
+  const ROWS = 6;
+  const COLS = 7;
+  const Z_BOARD = "zone:c4:board" as ID;
+  
+  function initBoard(): BoardZone {
+    return {
+      id: Z_BOARD,
+      name: "Board",
+      kind: "board",
+      rows: ROWS,
+      cols: COLS,
+      cells: Array(ROWS * COLS).fill(undefined),
+      // Let generic UI click columns -> move("drop", { col })
+      attrs: { onCellClick: { move: "drop", argKey: "col", useColumn: true } },
+    };
   }
-  return null;
-}
-
-function getUnusedDiscId(state: GameState, owner: PlayerID): ID | null {
-  const used = new Set<ID>();
-  for (const z of Object.values(state.zones)) {
-    if (z.kind === "board") {
-      for (const p of (z as BoardZone).cells) if (p) used.add(p);
+  
+  function cellIndex(row: number, col: number) {
+    return row * COLS + col;
+  }
+  
+  function topOccupied(b: BoardZone, col: number): boolean {
+    const idx = cellIndex(0, col);
+    return !!b.cells[idx];
+  }
+  
+  function findDropRow(b: BoardZone, col: number): number | null {
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (!b.cells[cellIndex(r, col)]) return r;
     }
+    return null;
   }
-  for (const [id, piece] of Object.entries(state.pieces)) {
-    if (piece.kind === "disc" && piece.owner === owner && !used.has(id as ID)) return id as ID;
-  }
-  return null;
-}
-
-function ownerAt(state: GameState, board: BoardZone, r: number, c: number): PlayerID | null {
-  const idx = r * COLS + c;
-  const pid = board.cells[idx];
-  if (!pid) return null;
-  return (state.pieces[pid].owner ?? null) as PlayerID | null;
-}
-
-function has4(state: GameState, board: BoardZone): PlayerID | null {
-  // directions: right, down, diag-down-right, diag-up-right
-  const dirs = [[0,1],[1,0],[1,1],[-1,1]];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const start = ownerAt(state, board, r, c);
-      if (!start) continue;
-      for (const [dr, dc] of dirs) {
-        let ok = true;
-        for (let k = 1; k < 4; k++) {
-          const rr = r + dr * k, cc = c + dc * k;
-          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) { ok = false; break; }
-          if (ownerAt(state, board, rr, cc) !== start) { ok = false; break; }
+  
+  function winnerC4(s: GameState, b: BoardZone): PlayerID | null {
+    const dirs = [
+      [0,1],   // right
+      [1,0],   // down
+      [1,1],   // down-right
+      [1,-1],  // down-left
+    ];
+    const inside = (r: number, c: number) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
+  
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const id0 = b.cells[cellIndex(r, c)];
+        if (!id0) continue;
+        const owner = s.pieces[id0].owner;
+        for (const [dr, dc] of dirs) {
+          let k = 1;
+          while (k < 4) {
+            const rr = r + dr * k;
+            const cc = c + dc * k;
+            if (!inside(rr, cc)) break;
+            const idk = b.cells[cellIndex(rr, cc)];
+            if (!idk || s.pieces[idk].owner !== owner) break;
+            k++;
+          }
+          if (k >= 4 && owner) return owner;
         }
-        if (ok) return start;
       }
     }
+    return null;
   }
-  return null;
-}
-
-/** Game definition */
-export const Connect4: GameDefinition = {
-  settings,
-  box,
-  phases: [{ id: "play" }],
-  moves: {
-    drop: {
-      name: "drop",
-      validate(s: GameState, a: { col: number }) {
-        const col = a?.col ?? -1;
-        if (col < 0 || col >= COLS) return "Column out of bounds";
-        const board = s.zones[BOARD.id] as BoardZone;
-        if (lowestOpenRow(board, col) === null) return "Column is full";
-        return null;
+  
+  function isFull(b: BoardZone): boolean {
+    return b.cells.every(Boolean);
+  }
+  
+  const settings: Settings = {
+    id: "connect4",
+    name: "Connect-4",
+    players: { min: 2, max: 2, default: 2 },
+    allowSpectators: true,
+    hiddenInfo: false,
+  };
+  
+  const box = new GameBox(settings);
+  
+  export const Connect4: GameDefinition = {
+    settings,
+    box,
+  
+    setup(s) {
+      s.zones[Z_BOARD] = initBoard();
+      s.ctx.phase = "play";
+      return s;
+    },
+  
+    phases: [{ id: "play" }],
+  
+    moves: {
+      drop: {
+        name: "drop",
+        validate(s, a: { col: number }) {
+          const b = s.zones[Z_BOARD] as BoardZone;
+          if (!b) return "No board.";
+          const { col } = a ?? {};
+          if (typeof col !== "number" || col < 0 || col >= COLS) return "Invalid column.";
+          if (topOccupied(b, col)) return "Column full.";
+          return null;
+        },
+        apply(s, a: { col: number }) {
+          const b = s.zones[Z_BOARD] as BoardZone;
+          const row = findDropRow(b, a.col)!;
+          const pid = s.ctx.currentPlayer;
+          const pieceId = (`piece:c4:${s.ctx.turn}:${row}:${a.col}`) as ID;
+          s.pieces[pieceId] = {
+            id: pieceId,
+            kind: "disc",
+            owner: pid,
+            shape: "square",
+            attrs: {},
+          };
+          const next = b.cells.slice();
+          next[cellIndex(row, a.col)] = pieceId;
+          s.zones[Z_BOARD] = { ...b, cells: next };
+          return s;
+        },
       },
-      apply(s: GameState, a: { col: number }) {
-        const board = s.zones[BOARD.id] as BoardZone;
-        const row = lowestOpenRow(board, a.col);
-        if (row === null) throw new Error("Full column");
-        const me = s.ctx.currentPlayer;
-        const id = getUnusedDiscId(s, me);
-        if (!id) throw new Error("No disc available");
-        return placeOnBoard(s, id, BOARD.id, row * COLS + a.col);
+      restart: {
+        name: "restart",
+        apply(s) {
+          s.zones[Z_BOARD] = initBoard();
+          s.pieces = {};
+          s.ctx.turn = 0;
+          s.ctx.currentPlayer = s.ctx.players[0];
+          s.ctx.winner = undefined;
+          return s;
+        },
       },
     },
-  },
-  isTerminal(s) {
-    const b = s.zones[BOARD.id] as BoardZone;
-    if (has4(s, b)) return true;
-    return boardCells(s, BOARD.id).every(Boolean);
-  },
-  getWinner(s) {
-    const b = s.zones[BOARD.id] as BoardZone;
-    const p = has4(s, b);
-    if (p) return p;
-    return "draw";
-  },
-};
-
-export function createMatch(players: string[], seed?: number | string) {
-  return _createMatch(Connect4, players, seed);
-}
+  
+    isTerminal(s) {
+      const b = s.zones[Z_BOARD] as BoardZone;
+      if (!b) return false;
+      const w = winnerC4(s, b);
+      if (w) return true;
+      if (isFull(b)) return true;
+      return false;
+    },
+  
+    getWinner(s) {
+      const b = s.zones[Z_BOARD] as BoardZone;
+      const w = winnerC4(s, b);
+      return w ?? "draw";
+    },
+  
+    controls(s, pid) {
+      const b = s.zones[Z_BOARD] as BoardZone | undefined;
+      if (!b) return [];
+      const over = Connect4.isTerminal!(s);
+      const isTurn = s.ctx.currentPlayer === pid;
+      const full = Array.from({ length: COLS }, (_, c) => topOccupied(b, c));
+  
+      const buttons: Control[] = [];
+      for (let c = 0; c < COLS; c++) {
+        buttons.push({
+          id: `c4:drop-${c}`,
+          label: `Drop ${c + 1}`,
+          move: "drop",
+          args: { col: c },
+          input: { type: "none" },
+          disabled: over || !isTurn || full[c],
+          disabledReason: over ? "Game over" : !isTurn ? "Not your turn" : full[c] ? "Column full" : undefined,
+          group: "primary",
+        });
+      }
+      buttons.push({
+        id: "c4:restart",
+        label: "Restart",
+        move: "restart",
+        input: { type: "none" },
+        group: "utility",
+      });
+      return buttons;
+    },
+  };
+  
+  export function createMatch(players: string[]) {
+    return baseCreate(Connect4, players);
+  }
+  

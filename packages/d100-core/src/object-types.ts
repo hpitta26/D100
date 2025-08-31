@@ -12,22 +12,22 @@ export type Anchor =
   | "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 export interface UILayout {
-  anchor: Anchor;           // where to place on the table/canvas
-  order?: number;           // z-index hint (larger = above)
-  width?: number;           // optional size hints (renderer decides units)
+  anchor: Anchor;
+  order?: number;
+  width?: number;
   height?: number;
-  offset?: { x?: number; y?: number }; // fine tune placement
-  gridArea?: string;        // optional named CSS grid area
+  offset?: { x?: number; y?: number };
+  gridArea?: string;
 }
 
 // ---------- Players ----------
 export interface Player {
   id: PlayerID;
-  seat: number;              // turn order number
+  seat: number;
   name?: string;
   health?: number;
   victoryPoints?: number;
-  attrs?: Record<string, unknown>;
+  attrs?: Record<string, unknown>;   // use for stacks/banks etc.
 }
 
 // ---------- Pieces & Cards ----------
@@ -35,24 +35,24 @@ export interface SkinRef { svgId?: string; cssClass?: string; }
 
 export interface Piece {
   id: ID;
-  kind: string;              // developer-defined (e.g., "meeple", "cube", "markX")
-  owner?: PlayerID | null;   // null for neutral
-  shape?: "square";          // future: "hex", "circle"
+  kind: string;               // developer-defined
+  owner?: PlayerID | null;
+  shape?: "square";
   skin?: SkinRef;
   attrs?: Record<string, unknown>;
 }
 
 export interface Card extends Piece {
   cardName: string;
-  cardType: string;          // developer-defined card type
+  cardType: string;           // developer-defined card type
 }
 
 // ---------- Zones ----------
 export type ZoneKind = "board" | "stack" | "hand" | "bag" | "discard" | "pool" | "area";
 
 export interface ZoneRule {
-  allowKinds?: string[];     // which piece/card kinds may enter
-  maxItems?: number | null;  // capacity
+  allowKinds?: string[];
+  maxItems?: number | null;
   visibility?: "public" | "owner" | "none";
 }
 
@@ -60,23 +60,24 @@ export interface ZoneBase {
   id: ID;
   name: string;
   kind: ZoneKind;
-  owner?: PlayerID | null;   // hands typically have owners
+  owner?: PlayerID | null;
   rule?: ZoneRule;
-  ui?: UILayout;             // presentational only
+  ui?: UILayout;
+  /** Freeform metadata the renderer/dev tools can read.  */
+  attrs?: Record<string, unknown>; // <-- added
 }
 
 export interface BoardZone extends ZoneBase {
   kind: "board";
   rows: number;
   cols: number;
-  // cell i -> piece id
   cells: Array<ID | undefined>;
   skin?: SkinRef;
 }
 
 export interface StackZone extends ZoneBase {
   kind: "stack" | "hand" | "bag" | "discard" | "pool" | "area";
-  order: ID[];               // top is end
+  order: ID[];
 }
 
 export type Zone = BoardZone | StackZone;
@@ -86,7 +87,7 @@ export interface Deck {
   id: ID;
   name: string;
   owner?: PlayerID | null;
-  piles: Record<string, ID[]>; // e.g. draw/discard/revealed/etc
+  piles: Record<string, ID[]>;
 }
 
 // ---------- Phases ----------
@@ -98,19 +99,19 @@ export interface Phase {
 
 // ---------- DICE ----------
 export interface DieFace {
-  value?: number | string;      // what this face means (e.g., 1..6, "wood", "robber")
-  weight?: number;              // default 1; supports weighted dice
-  skin?: SkinRef;               // optional skin per face
+  value?: number | string;
+  weight?: number;
+  skin?: SkinRef;
   attrs?: Record<string, unknown>;
 }
 
 export interface Die {
   id: ID;
   name: string;
-  kind: string;                 // e.g., "D6", "D20", "ResourceDie"
-  sides: number;                // number of faces
-  faces?: DieFace[];            // optional explicit faces (length may equal sides)
-  owner?: PlayerID | null;      // usually null
+  kind: string;     // e.g., "D6", "D20"
+  sides: number;
+  faces?: DieFace[];
+  owner?: PlayerID | null;
   skin?: SkinRef;
   attrs?: Record<string, unknown>;
 }
@@ -128,10 +129,10 @@ export interface GameContext {
 export interface GameState {
   ctx: GameContext;
   players: Record<PlayerID, Player>;
-  pieces: Record<ID, Piece>;     // includes Card (via discriminated props)
+  pieces: Record<ID, Piece>;
   zones: Record<ID, Zone>;
   decks: Record<ID, Deck>;
-  dice: Record<ID, Die>;         // <-- NEW: dice pool
+  dice: Record<ID, Die>;
   log?: Array<{ t: string; atTurn: number; data?: any }>;
 }
 
@@ -140,18 +141,18 @@ export interface PlayerSlots { min: number; max: number; default: number; }
 
 export interface PieceTemplate {
   kind: string;
-  perPlayer?: number;         // create per player
-  extras?: number;            // neutral/global extra pieces
+  perPlayer?: number;
+  extras?: number;
   attrs?: Record<string, unknown>;
   skin?: SkinRef;
-  asCard?: { name: string; type: string; skin?: SkinRef }; // build Cards instead
+  asCard?: { name: string; type: string; skin?: SkinRef };
 }
 
 export interface DiceTemplate {
-  kind: string;               // e.g., "D6", "D20", "ResourceDie"
+  kind: string;
   sides: number;
-  count: number;              // how many dice of this kind in the box
-  faces?: DieFace[];          // optional icons/labels/weights
+  count: number;
+  faces?: DieFace[];
   skin?: SkinRef;
   owner?: PlayerID | null;
   attrs?: Record<string, unknown>;
@@ -165,5 +166,30 @@ export interface Settings {
   hiddenInfo?: boolean;
   setupSeed?: number | string;
   pieces?: PieceTemplate[];
-  dice?: DiceTemplate[];      // <-- NEW
+  dice?: DiceTemplate[];
+}
+
+/* ---------------------- NEW: Controls metadata ---------------------- */
+
+export type ControlInput =
+  | { type: "none" }
+  | { type: "number"; min: number; max: number; step?: number; default?: number }
+  | { type: "select"; options: Array<{ label: string; value: any }>; default?: any };
+
+export interface Control {
+  /** Stable id for UI keys (e.g., "poker:bet", "c4:drop-3"). */
+  id: string;
+  /** Button label shown in the UI. Keep short. */
+  label: string;
+  /** The move name to invoke from GameDefinition.moves */
+  move: string;
+  /** Optional static args sent to the move (UI may further add user-provided fields). */
+  args?: Record<string, any>;
+  /** Optional input description so a generic UI can render a slider/select. */
+  input?: ControlInput;
+  /** If disabled, show reason as tooltip. */
+  disabled?: boolean;
+  disabledReason?: string;
+  /** Optional grouping (e.g., "betting", "utility"). */
+  group?: string;
 }
