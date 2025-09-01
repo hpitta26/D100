@@ -3,6 +3,7 @@
 import { LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu";
 import { FaDiceD20 } from "react-icons/fa";
 import { IoArrowBackOutline } from "react-icons/io5";
+import { FiLayout } from "react-icons/fi";
 
 import { useMemo, useState } from "react";
 import * as TTT from "../../../../packages/d100-games/src/tictactoe";
@@ -134,6 +135,12 @@ export default function LabPage() {
                 {layoutPreview ? "Game View" : "Layout Preview"}
               </button>
             )}
+            <button 
+              onClick={() => window.location.href = `/lab/editor/${gameKey}`}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white mt-2"
+            >
+              <FiLayout className="w-4 h-4" /> Layout Editor
+            </button>
           </div>
         </div>
 

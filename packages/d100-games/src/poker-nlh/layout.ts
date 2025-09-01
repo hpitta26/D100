@@ -15,12 +15,6 @@ export const pokerLayout: GameLayoutConfig = {
       zone: "board.center",
     },
 
-    // Community cards
-    "community-cards": {
-      zone: "board.top",
-      order: 1,
-    },
-
     // Players positioned around the table
     "player-0": {
       zone: "board.bottom",
