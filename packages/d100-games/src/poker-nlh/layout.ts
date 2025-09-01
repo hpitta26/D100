@@ -67,5 +67,11 @@ export const pokerLayout: GameLayoutConfig = {
       zone: "footer.center",
       order: 1,
     },
+
+    // Right sidebar elements
+    "blind-levels": {
+      zone: "rightbar.top",
+      order: 1,
+    },
   },
 };

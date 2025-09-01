@@ -26,6 +26,7 @@ export type LayoutZone =
   | "board.top" | "board.bottom" | "board.left" | "board.right"
   | "corner.top-left" | "corner.top-right" | "corner.bottom-left" | "corner.bottom-right"
   | "footer.left" | "footer.center" | "footer.right"
+  | "rightbar.top" | "rightbar.center" | "rightbar.bottom"
   | "floating";
 
 export interface LayoutPosition {
@@ -95,6 +96,7 @@ export interface GameLayoutConfig {
     "corner.bottom-left"?: number;
     "corner.bottom-right"?: number;
     "footer"?: number; // Height of the footer
+    "rightbar"?: number; // Width of the right sidebar
   };
   
   // Simple element to zone mapping

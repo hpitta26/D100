@@ -609,16 +609,19 @@ function LayoutPreview({
   const leftWidth = layout.zoneSizes?.["board.left"] || 110;
   const rightWidth = layout.zoneSizes?.["board.right"] || 110;
   const footerHeight = layout.zoneSizes?.["footer"] || 100;
+  const rightbarWidth = layout.zoneSizes?.["rightbar"] || 250;
   const cornerSize = 60;
 
   return (
     <div className="flex h-full flex-col">
-      {/* Main board layout area */}
-      <div className="flex flex-1 items-center justify-center p-8">
-        <div className="relative" style={{ 
-          width: boardSize + leftWidth + rightWidth, 
-          height: boardSize + topHeight + bottomHeight 
-        }}>
+      {/* Main content area */}
+      <div className="flex flex-1">
+        {/* Board layout area */}
+        <div className="flex flex-1 items-center justify-center p-8">
+          <div className="relative" style={{ 
+            width: boardSize + leftWidth + rightWidth, 
+            height: boardSize + topHeight + bottomHeight 
+          }}>
 
         {/* Corner zones */}
         <div 
@@ -767,22 +770,46 @@ function LayoutPreview({
           
           return indicator;
         })}
+          </div>
+        </div>
+
+        {/* Right sidebar - Full height */}
+        <div className="flex flex-col border-l-4 border-indigo-500 bg-indigo-100" style={{ width: rightbarWidth, minWidth: rightbarWidth }}>
+          <div 
+            className="border-b-2 border-indigo-400 flex items-center justify-center p-4 bg-indigo-200"
+            style={{ minHeight: "120px" }}
+          >
+            <span className="text-lg font-bold text-indigo-800">rightbar.top</span>
+          </div>
+          
+          <div 
+            className="flex-1 border-b-2 border-indigo-400 flex items-center justify-center p-4 bg-indigo-50"
+          >
+            <span className="text-lg font-bold text-indigo-800 transform rotate-90">rightbar.center</span>
+          </div>
+          
+          <div 
+            className="flex items-center justify-center p-4 bg-indigo-200"
+            style={{ minHeight: "120px" }}
+          >
+            <span className="text-lg font-bold text-indigo-800">rightbar.bottom</span>
+          </div>
         </div>
       </div>
       
       {/* Full-width footer at bottom of page */}
       <div 
-        className="bg-slate-100 border-t-2 border-slate-300 flex"
+        className="bg-yellow-100 border-t-4 border-yellow-400 flex"
         style={{ height: footerHeight }}
       >
-        <div className="flex-1 border-r border-slate-300 flex items-center justify-center">
-          <span className="text-sm font-medium text-slate-700">footer.left</span>
+        <div className="flex-1 border-r-2 border-yellow-400 flex items-center justify-center bg-yellow-50">
+          <span className="text-lg font-bold text-yellow-800">footer.left</span>
         </div>
-        <div className="flex-1 border-r border-slate-300 flex items-center justify-center">
-          <span className="text-sm font-medium text-slate-700">footer.center</span>
+        <div className="flex-1 border-r-2 border-yellow-400 flex items-center justify-center bg-yellow-200">
+          <span className="text-lg font-bold text-yellow-800">footer.center</span>
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-sm font-medium text-slate-700">footer.right</span>
+        <div className="flex-1 flex items-center justify-center bg-yellow-50">
+          <span className="text-lg font-bold text-yellow-800">footer.right</span>
         </div>
       </div>
     </div>
@@ -815,6 +842,7 @@ function AdvancedLayoutTable({
   const leftWidth = layout.zoneSizes?.["board.left"] || 110;
   const rightWidth = layout.zoneSizes?.["board.right"] || 110;
   const footerHeight = layout.zoneSizes?.["footer"] || 100;
+  const rightbarWidth = layout.zoneSizes?.["rightbar"] || 250;
   const cornerSize = 60;
 
   // Helper to render elements in a zone
@@ -878,18 +906,30 @@ function AdvancedLayoutTable({
             <div className="text-xs text-zinc-500">Phase: {state.ctx.phase}</div>
           </div>
         )}
+        {elementId === "blind-levels" && (
+          <div className="text-center text-sm">
+            <div className="font-medium mb-2">Blind Levels</div>
+            <div className="text-xs text-zinc-500 space-y-1">
+              <div className="font-medium">Current: 10/20</div>
+              <div>Next: 15/30</div>
+              <div>Time: 8:45</div>
+            </div>
+          </div>
+        )}
       </div>
     ));
   };
 
-  return (
+    return (
     <div className="flex h-full flex-col">
-      {/* Main board layout area */}
-      <div className="flex flex-1 items-center justify-center p-4">
-        <div className="relative" style={{ 
-          width: boardSize + leftWidth + rightWidth, 
-          height: boardSize + topHeight + bottomHeight 
-        }}>
+      {/* Main content area */}
+      <div className="flex flex-1">
+        {/* Board layout area */}
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="relative" style={{
+            width: boardSize + leftWidth + rightWidth, 
+            height: boardSize + topHeight + bottomHeight 
+          }}>
 
         {/* Corner zones */}
         <div 
@@ -1015,6 +1055,30 @@ function AdvancedLayoutTable({
               {renderZoneElements("floating")}
             </div>
           ))}
+        </div>
+        </div>
+
+        {/* Right sidebar - Full height */}
+        <div className="flex flex-col border-l border-black/10 dark:border-white/10" style={{ width: rightbarWidth }}>
+          <div 
+            className="flex items-center justify-center p-4 border-b border-black/5 dark:border-white/5"
+            style={{ minHeight: "120px" }}
+          >
+            {renderZoneElements("rightbar.top")}
+          </div>
+          
+          <div 
+            className="flex-1 flex flex-col items-center justify-center p-4 border-b border-black/5 dark:border-white/5"
+          >
+            {renderZoneElements("rightbar.center")}
+          </div>
+          
+          <div 
+            className="flex items-center justify-center p-4"
+            style={{ minHeight: "120px" }}
+          >
+            {renderZoneElements("rightbar.bottom")}
+          </div>
         </div>
       </div>
       
