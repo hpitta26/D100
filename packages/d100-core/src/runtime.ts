@@ -1,4 +1,4 @@
-import { GameState, GameStatus, PlayerID, Phase, Control } from "./object-types";
+import { GameState, GameStatus, PlayerID, Phase, Control, GameLayoutConfig } from "./object-types";
 import { Settings } from "./object-types";
 import { GameBox } from "./objects";
 import { seedFromString } from "./util-seed";
@@ -16,7 +16,7 @@ export interface PhaseDef extends Phase {}
 /* ---------- Game Definition ---------- */
 export interface GameDefinition {
   settings: Settings;                  // seats, pieces per player, extras, etc.
-  box: GameBox;                        // the “what’s in the box”
+  box: GameBox;                        // the "what's in the box"
   phases?: PhaseDef[];
   moves: Record<string, MoveDef<any>>;
   isTerminal?: (s: GameState) => boolean;
@@ -25,6 +25,9 @@ export interface GameDefinition {
 
   /** NEW: optional hook to compute valid, contextual controls for a player. */
   controls?: (s: GameState, forPlayer: PlayerID) => Control[];
+  
+  /** NEW: advanced layout configuration */
+  layout?: GameLayoutConfig;
 }
 
 /* ---------- Helpers ---------- */

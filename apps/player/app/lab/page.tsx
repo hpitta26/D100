@@ -1,19 +1,37 @@
 "use client";
 
+import { LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu";
+import { FaDiceD20 } from "react-icons/fa";
+import { IoArrowBackOutline } from "react-icons/io5";
+
 import { useMemo, useState } from "react";
 import * as TTT from "../../../../packages/d100-games/src/tictactoe";
 import * as C4 from "../../../../packages/d100-games/src/connect4";
 import * as POKER from "../../../../packages/d100-games/src/poker-nlh";
 
 import { GameDefinition, applyMove, endTurn, getControls } from "../../../../packages/d100-core/src/runtime";
-import { GameState, BoardZone, StackZone, Zone } from "../../../../packages/d100-core/src/object-types";
+import { GameState, BoardZone, StackZone, Zone, GameLayoutConfig, LayoutZone, LayoutPosition } from "../../../../packages/d100-core/src/object-types";
 
 type GameKey = "tictactoe" | "connect4" | "poker";
 
+// Helper function to get layout for each game
+const getLayoutForGame = (gameKey: GameKey): GameLayoutConfig | undefined => {
+  if (gameKey === "tictactoe") return TTT.TicTacToe.layout;
+  if (gameKey === "connect4") return C4.Connect4.layout;
+  if (gameKey === "poker") return POKER.PokerNLH.layout;
+  return undefined;
+};
+
 export default function LabPage() {
-  const [gameKey, setGameKey] = useState<GameKey>("tictactoe");
+  const [gameKey, setGameKey] = useState<GameKey>("poker");
   const [state, setState] = useState<GameState | null>(null);
+  const [layoutPreview, setLayoutPreview] = useState(false);
   const [def, setDef] = useState<GameDefinition | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
 
   const create = () => {
     if (gameKey === "tictactoe") {
@@ -45,39 +63,87 @@ export default function LabPage() {
   }, [def, state]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 text-zinc-900 dark:from-zinc-950 dark:to-zinc-900 dark:text-zinc-100">
-      <nav className="flex items-center justify-between border-b border-black/5 bg-white/60 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-900/60">
-        <div className="flex items-center gap-3">
-          <span className="rounded-lg bg-zinc-900 px-2 py-1 text-white dark:bg-white dark:text-zinc-900">Lab</span>
-          <select
-            className="rounded-lg border border-black/10 bg-white/70 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900/70"
-            value={gameKey}
-            onChange={(e) => setGameKey(e.target.value as GameKey)}
-          >
-            <option value="tictactoe">Tic-Tac-Toe</option>
-            <option value="connect4">Connect-4</option>
-            <option value="poker">NLH Poker (dev)</option>
-          </select>
-          <button onClick={create} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:opacity-95">
-            Create Match
-          </button>
+    <div className="flex h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 text-zinc-900 dark:from-zinc-950 dark:to-zinc-900 dark:text-zinc-100">
+      {/* Collapsed Floating Header */}
+      {sidebarCollapsed && (
+        <div className="fixed top-0 left-0 z-50 p-4">
+          <div className="flex items-center gap-3 rounded-lg bg-white/90 p-3 backdrop-blur dark:bg-zinc-900/90">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+                <FaDiceD20 className="h-5.5 w-5.5" aria-label="D20 logo" />
+            </div>
+            <span className="text-lg font-semibold tracking-wide">D100 - Lab</span>
+            <LuPanelLeftOpen 
+              className="w-5 h-5 text-gray-400 dark:text-gray-300 cursor-pointer hover:text-gray-600 dark:hover:text-gray-100" 
+              onClick={toggleSidebar}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Left Sidebar: Inspector */}
+      {!sidebarCollapsed && (
+        <aside className="flex w-80 flex-col border-r border-black/5 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-zinc-900/80">
+          {/* Sidebar Header */}
+          <div className="border-b border-black/5 p-4 dark:border-white/10">
+            <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+                    <FaDiceD20 className="h-5.5 w-5.5" aria-label="D20 logo" />
+                </div>
+                <span className="text-lg font-semibold tracking-wide">D100 - Lab</span>
+                <div className="flex-1"></div>
+                <LuPanelLeftClose 
+                    className="w-5 h-5 text-gray-400 dark:text-gray-300 cursor-pointer hover:text-gray-600 dark:hover:text-gray-100" 
+                    onClick={toggleSidebar}
+                />
+            </div>
+            <div className="mt-3">
+              <select
+                className="w-full rounded-lg border border-black/10 bg-white/70 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900/70"
+                value={gameKey}
+                onChange={(e) => setGameKey(e.target.value as GameKey)}
+            >
+                <option value="poker">NLH Poker (dev)</option>
+                <option value="tictactoe">Tic-Tac-Toe</option>
+                <option value="connect4">Connect-4</option>
+            </select>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button 
+              onClick={create} 
+              className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:opacity-95"
+            >
+              Create Match
+            </button>
+            <button 
+              onClick={rotate} 
+              className="flex-1 rounded-lg px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Next →
+            </button>
+          </div>
+          <div className="mt-3">
+            {state && (
+              <button 
+                onClick={() => setLayoutPreview(!layoutPreview)}
+                className={`w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  layoutPreview 
+                    ? "bg-green-600 text-white" 
+                    : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                }`}
+              >
+                {layoutPreview ? "Game View" : "Layout Preview"}
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={rotate} className="rounded-lg px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">
-            Next Player →
-          </button>
-        </div>
-      </nav>
-
-      <main className="mx-auto grid max-w-6xl grid-cols-10 gap-4 p-4">
-        {/* Left: Inspector (sidebar) */}
-        <section className="col-span-3 rounded-2xl border border-black/5 bg-white/70 p-4 shadow dark:border-white/10 dark:bg-zinc-900/70">
-          <h2 className="mb-2 text-sm font-semibold">Inspector</h2>
+        {/* Inspector Content */}
+        <div className="flex-1 overflow-hidden p-4">
+          <h2 className="mb-3 text-sm font-semibold">Inspector</h2>
           {!state ? (
             <p className="text-sm text-zinc-500">Create a match to begin.</p>
           ) : (
-            <pre className="max-h-[70vh] overflow-auto rounded-lg bg-black/5 p-3 text-xs dark:bg-white/10">
+            <pre className="overflow-auto rounded-lg bg-black/5 p-3 text-xs dark:bg-white/10">
 {JSON.stringify({
   phase: state.ctx.phase,
   turn: state.ctx.turn,
@@ -86,22 +152,49 @@ export default function LabPage() {
 }, null, 2)}
             </pre>
           )}
-        </section>
+        </div>
 
-        {/* Right: Board + Controls (game-agnostic) */}
-        <section className="col-span-7 rounded-2xl border border-black/5 bg-white/70 p-4 shadow dark:border-white/10 dark:bg-zinc-900/70">
-          <h2 className="mb-3 text-sm font-semibold">Table</h2>
-          {!state ? (
-            <p className="text-sm text-zinc-500">—</p>
+        {/* Back to Home Button */}
+        <div className="border-t border-black/5 p-4 dark:border-white/10">
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-3 py-2 text-sm font-semibold transition-colors"
+          >
+            <IoArrowBackOutline className="w-5 h-5" /> Back to Home
+          </button>
+        </div>
+        </aside>
+      )}
+
+      {/* Main Content: Table */}
+      <main className="flex flex-1 overflow-hidden">
+
+        {/* Table Content */}
+        <div className="flex-1 overflow-auto">
+          {layoutPreview || !state ? (
+            <LayoutPreview layout={getLayoutForGame(gameKey)} gameName={gameKey} />
           ) : (
-            <>
-              <GenericTable state={state} onMove={doMove} />
-              {controls.length > 0 && (
-                <ControlsPanel controls={controls} onMove={doMove} />
+            <div className="h-full">
+              {def?.layout ? (
+                <AdvancedLayoutTable 
+                  state={state} 
+                  onMove={doMove} 
+                  layout={def.layout}
+                  controls={controls}
+                />
+              ) : (
+                <>
+                  <GenericTable state={state} onMove={doMove} />
+                  {controls.length > 0 && (
+                    <div className="mt-4">
+                      <ControlsPanel controls={controls} onMove={doMove} />
+                    </div>
+                  )}
+                </>
               )}
-            </>
+            </div>
           )}
-        </section>
+        </div>
       </main>
     </div>
   );
@@ -137,40 +230,59 @@ function GenericTable({
     const stacks = zones.filter((z): z is StackZone => z.kind !== "board");
   
     return (
-      <div className="space-y-6">
-        {/* Boards */}
-        {boards.length > 0 && (
-          <div className="space-y-4">
-            {boards.map((b) => (
-              <BoardZoneView key={b.id} zone={b} state={state} onMove={onMove} />
-            ))}
-          </div>
-        )}
-  
-        {/* Non-board zones */}
-        {stacks.length > 0 && (
-          <div className="space-y-3">
-            {stacks.map((z) => (
-              <StackZoneView key={z.id} zone={z} state={state} />
-            ))}
-          </div>
-        )}
-  
-        {/* Dice (if any) */}
-        {state.dice && Object.keys(state.dice).length > 0 && (
-          <div className="rounded-xl border border-black/10 p-3 text-sm dark:border-white/10">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-70">
-              Dice
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Object.values(state.dice).map((d) => (
-                <div
-                  key={d.id}
-                  className="rounded-lg border border-black/10 bg-white px-3 py-1.5 dark:border-white/10 dark:bg-zinc-800"
-                >
-                  {d.name} ({d.kind}, {d.sides}-sided)
+      <div className="flex h-full flex-col">
+        {/* Main Board Container - Fixed size and centered */}
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-[500px] w-[500px] rounded-2xl border-2 border-black/10 bg-white/50 p-6 shadow-lg backdrop-blur dark:border-white/10 dark:bg-zinc-900/50">
+            {boards.length > 0 ? (
+              <div className="flex h-full items-center justify-center">
+                <BoardZoneView key={boards[0].id} zone={boards[0]} state={state} onMove={onMove} />
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-zinc-400">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">🎲</div>
+                  <div className="text-sm">No board zones</div>
                 </div>
-              ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Secondary zones and info - Below the main board */}
+        {(stacks.length > 0 || (state.dice && Object.keys(state.dice).length > 0)) && (
+          <div className="mt-4 flex justify-center">
+            <div className="flex max-w-4xl gap-6">
+              {/* Non-board zones */}
+              {stacks.length > 0 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide opacity-70">
+                    Other Zones
+                  </div>
+                  {stacks.map((z) => (
+                    <StackZoneView key={z.id} zone={z} state={state} />
+                  ))}
+                </div>
+              )}
+        
+              {/* Dice */}
+              {state.dice && Object.keys(state.dice).length > 0 && (
+                <div className="rounded-xl border border-black/10 p-3 text-sm dark:border-white/10">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-70">
+                    Dice
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.values(state.dice).map((d) => (
+                      <div
+                        key={d.id}
+                        className="rounded-lg border border-black/10 bg-white px-3 py-1.5 dark:border-white/10 dark:bg-zinc-800"
+                      >
+                        {d.name} ({d.kind}, {d.sides}-sided)
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -224,17 +336,20 @@ function GenericTable({
     }
   
     return (
-      <div className="rounded-xl border border-black/10 p-3 dark:border-white/10">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="text-sm font-semibold">{zone.name}</div>
-          <div className="text-xs opacity-70">
+      <div className="flex flex-col items-center justify-center h-full w-full">
+        <div className="mb-4 flex items-center justify-between w-full">
+          <div className="text-lg font-semibold">{zone.name}</div>
+          <div className="text-sm opacity-70">
             {rows}×{cols}
           </div>
         </div>
   
         <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+          className="grid gap-3 max-w-full max-h-full"
+          style={{ 
+            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+            aspectRatio: `${cols} / ${rows}`
+          }}
         >
           {Array.from({ length: rows * cols }).map((_, idx) => {
             const pid = zone.cells[idx];
@@ -250,7 +365,11 @@ function GenericTable({
               <button
                 key={idx}
                 onClick={() => clickCell(idx)}
-                className="grid h-16 place-items-center rounded-lg border border-black/10 bg-white text-sm shadow-sm hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-800"
+                className="grid place-items-center rounded-xl border-2 border-black/20 bg-white/80 text-base font-medium shadow-md hover:bg-zinc-50 hover:border-indigo-300 hover:shadow-lg transition-all duration-200 dark:border-white/20 dark:bg-zinc-800/80 dark:hover:bg-zinc-700"
+                style={{ 
+                  minHeight: `${Math.min(60, 400 / Math.max(rows, cols))}px`,
+                  minWidth: `${Math.min(60, 400 / Math.max(rows, cols))}px`
+                }}
               >
                 {label}
               </button>
@@ -458,7 +577,463 @@ function GenericTable({
       </div>
     );
   }
+
+/* --------------------
+ * Layout Preview Component
+ * Shows the layout zones and positioning without game content
+ * -------------------- */
+function LayoutPreview({ 
+  layout, 
+  gameName 
+}: { 
+  layout?: GameLayoutConfig; 
+  gameName: string; 
+}) {
+  if (!layout) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center text-zinc-500">
+          <div className="text-4xl mb-4">📐</div>
+          <div className="text-lg font-medium mb-2">No Layout Configuration</div>
+          <div className="text-sm">This game uses the default layout system</div>
+        </div>
+      </div>
+    );
+  }
+
+  const boardSize = layout.board.size === "auto" ? 400 : layout.board.size;
   
+  // Default zone sizes (can be overridden by layout.zoneSizes)
+  const topHeight = layout.zoneSizes?.["board.top"] || 100;
+  const bottomHeight = layout.zoneSizes?.["board.bottom"] || 100;
+  const leftWidth = layout.zoneSizes?.["board.left"] || 110;
+  const rightWidth = layout.zoneSizes?.["board.right"] || 110;
+  const footerHeight = layout.zoneSizes?.["footer"] || 100;
+  const cornerSize = 60;
 
+  return (
+    <div className="flex h-full flex-col">
+      {/* Main board layout area */}
+      <div className="flex flex-1 items-center justify-center p-8">
+        <div className="relative" style={{ 
+          width: boardSize + leftWidth + rightWidth, 
+          height: boardSize + topHeight + bottomHeight 
+        }}>
 
+        {/* Corner zones */}
+        <div 
+          className="absolute bg-gray-100 border border-gray-300 rounded flex items-center justify-center text-xs"
+          style={{ 
+            top: 0, 
+            left: 0, 
+            width: leftWidth, 
+            height: topHeight 
+          }}
+        >
+          corner.top-left
+        </div>
+        <div 
+          className="absolute bg-gray-100 border border-gray-300 rounded flex items-center justify-center text-xs"
+          style={{ 
+            top: 0, 
+            left: boardSize + rightWidth, 
+            width: rightWidth, 
+            height: topHeight 
+          }}
+        >
+          corner.top-right
+        </div>
+        <div 
+          className="absolute bg-gray-100 border border-gray-300 rounded flex items-center justify-center text-xs"
+          style={{ 
+            top: topHeight + boardSize, 
+            left: 0, 
+            width: leftWidth, 
+            height: bottomHeight 
+          }}
+        >
+          corner.bottom-left
+        </div>
+        <div 
+          className="absolute bg-gray-100 border border-gray-300 rounded flex items-center justify-center text-xs"
+          style={{ 
+            top: topHeight + boardSize, 
+            left: boardSize + rightWidth, 
+            width: rightWidth, 
+            height: bottomHeight 
+          }}
+        >
+          corner.bottom-right
+        </div>
+
+        {/* Board-adjacent zones */}
+        <div 
+          className="absolute bg-blue-100 border-2 border-blue-300 rounded-lg flex items-center justify-center"
+          style={{
+            top: 0,
+            left: leftWidth,
+            width: boardSize,
+            height: topHeight,
+          }}
+        >
+          <span className="text-sm font-medium text-blue-700">board.top</span>
+        </div>
+        
+        <div 
+          className="absolute bg-orange-100 border-2 border-orange-300 rounded-lg flex items-center justify-center"
+          style={{
+            top: topHeight + boardSize,
+            left: leftWidth,
+            width: boardSize,
+            height: bottomHeight,
+          }}
+        >
+          <span className="text-sm font-medium text-orange-700">board.bottom</span>
+        </div>
+
+        <div 
+          className="absolute bg-green-100 border-2 border-green-300 rounded-lg flex items-center justify-center"
+          style={{
+            left: 0,
+            top: topHeight,
+            width: leftWidth,
+            height: boardSize,
+          }}
+        >
+          <span className="text-sm font-medium text-green-700 transform -rotate-90">board.left</span>
+        </div>
+
+        <div 
+          className="absolute bg-purple-100 border-2 border-purple-300 rounded-lg flex items-center justify-center"
+          style={{
+            left: leftWidth + boardSize,
+            top: topHeight,
+            width: rightWidth,
+            height: boardSize,
+          }}
+        >
+          <span className="text-sm font-medium text-purple-700 transform rotate-90">board.right</span>
+        </div>
+
+        {/* Center board */}
+        <div 
+          className="absolute bg-emerald-100 border-4 border-emerald-400 rounded-2xl flex items-center justify-center"
+          style={{
+            top: topHeight,
+            left: leftWidth,
+            width: boardSize,
+            height: boardSize,
+          }}
+        >
+          <div className="text-center">
+            <div className="text-2xl font-bold text-emerald-700 mb-2">board.center</div>
+            <div className="text-sm text-emerald-600">{boardSize}×{boardSize}px</div>
+          </div>
+        </div>
+
+        {/* Element indicators */}
+        {Object.entries(layout.elements).map(([elementId, element]) => {
+          let indicator = null;
+          
+          if (element.zone === "floating" && element.coordinates) {
+            indicator = (
+              <div
+                key={elementId}
+                className="absolute bg-red-200 border border-red-400 rounded px-2 py-1 text-xs font-medium text-red-700"
+                style={{
+                  top: element.coordinates.y,
+                  left: element.coordinates.x,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                {elementId}
+              </div>
+            );
+          } else {
+            // Show element name in its zone
+            const zoneColor = element.zone.includes("board.top") ? "text-blue-800" :
+                            element.zone.includes("board.bottom") ? "text-orange-800" :
+                            element.zone.includes("board.left") ? "text-green-800" :
+                            element.zone.includes("board.right") ? "text-purple-800" :
+                            element.zone.includes("corner") ? "text-gray-800" :
+                            "text-emerald-800";
+            
+            indicator = (
+              <div key={elementId} className={`text-xs font-medium ${zoneColor} absolute`}>
+                {elementId}
+              </div>
+            );
+          }
+          
+          return indicator;
+        })}
+        </div>
+      </div>
+      
+      {/* Full-width footer at bottom of page */}
+      <div 
+        className="bg-slate-100 border-t-2 border-slate-300 flex"
+        style={{ height: footerHeight }}
+      >
+        <div className="flex-1 border-r border-slate-300 flex items-center justify-center">
+          <span className="text-sm font-medium text-slate-700">footer.left</span>
+        </div>
+        <div className="flex-1 border-r border-slate-300 flex items-center justify-center">
+          <span className="text-sm font-medium text-slate-700">footer.center</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <span className="text-sm font-medium text-slate-700">footer.right</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------
+ * Advanced Layout Table Component
+ * Renders game using the advanced layout system
+ * -------------------- */
+function AdvancedLayoutTable({
+  state,
+  onMove,
+  layout,
+  controls,
+}: {
+  state: GameState;
+  onMove: (move: string, args?: any) => void;
+  layout: GameLayoutConfig;
+  controls: any[];
+}) {
+  const zones = Object.values(state.zones) as Zone[];
+  const boards = zones.filter((z): z is BoardZone => z.kind === "board");
+  
+  const boardSize = layout.board.size === "auto" ? 400 : layout.board.size;
+  
+  // Zone sizes (can be overridden by layout.zoneSizes)
+  const topHeight = layout.zoneSizes?.["board.top"] || 100;
+  const bottomHeight = layout.zoneSizes?.["board.bottom"] || 100;
+  const leftWidth = layout.zoneSizes?.["board.left"] || 110;
+  const rightWidth = layout.zoneSizes?.["board.right"] || 110;
+  const footerHeight = layout.zoneSizes?.["footer"] || 100;
+  const cornerSize = 60;
+
+  // Helper to render elements in a zone
+  const renderZoneElements = (zoneName: LayoutZone) => {
+    const zoneElements = Object.entries(layout.elements)
+      .filter(([_, element]) => element.zone === zoneName)
+      .sort(([_, a], [__, b]) => (a.order || 0) - (b.order || 0));
+
+    return zoneElements.map(([elementId, element]) => (
+      <div
+        key={elementId}
+        className="rounded-lg border border-black/10 bg-white/80 p-3 shadow-sm dark:border-white/10 dark:bg-zinc-800/80"
+      >
+        <div className="text-xs font-medium text-zinc-600 mb-2">{elementId}</div>
+        {elementId === "board" && boards[0] && (
+          <BoardZoneView zone={boards[0]} state={state} onMove={onMove} />
+        )}
+        {elementId.startsWith("player-") && (
+          <div className="text-center">
+            <div className="text-sm font-medium">Player {elementId.split("-")[1]}</div>
+            <div className="text-xs text-zinc-500 mt-1">Stack: $1000</div>
+          </div>
+        )}
+        {elementId === "community-cards" && (
+          <div className="flex gap-1 justify-center">
+            {[1,2,3,4,5].map(i => (
+              <div key={i} className="w-8 h-12 bg-zinc-200 rounded border text-xs flex items-center justify-center">
+                {i <= 3 ? "🂠" : "?"}
+              </div>
+            ))}
+          </div>
+        )}
+        {elementId === "pot" && (
+          <div className="text-center">
+            <div className="text-lg font-bold">$250</div>
+            <div className="text-xs text-zinc-500">Pot</div>
+          </div>
+        )}
+        {elementId === "actions" && controls.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {controls.slice(0, 3).map((control, i) => (
+              <button
+                key={i}
+                className="px-2 py-1 bg-indigo-600 text-white text-xs rounded hover:opacity-90"
+                onClick={() => onMove(control.move, control.args)}
+              >
+                {control.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {elementId === "game-info" && (
+          <div className="text-center text-xs">
+            <div>Turn: {state.ctx.turn}</div>
+            <div>Phase: {state.ctx.phase}</div>
+          </div>
+        )}
+        {elementId === "game-status" && (
+          <div className="text-center text-sm">
+            <div className="font-medium">Current Player: {state.ctx.currentPlayer}</div>
+            <div className="text-xs text-zinc-500">Phase: {state.ctx.phase}</div>
+          </div>
+        )}
+      </div>
+    ));
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Main board layout area */}
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className="relative" style={{ 
+          width: boardSize + leftWidth + rightWidth, 
+          height: boardSize + topHeight + bottomHeight 
+        }}>
+
+        {/* Corner zones */}
+        <div 
+          className="absolute flex items-center justify-center p-2"
+          style={{ 
+            top: topHeight - cornerSize/2, 
+            left: leftWidth - cornerSize/2, 
+            width: cornerSize, 
+            height: cornerSize 
+          }}
+        >
+          {renderZoneElements("corner.top-left")}
+        </div>
+        <div 
+          className="absolute flex items-center justify-center p-2"
+          style={{ 
+            top: topHeight - cornerSize/2, 
+            left: leftWidth + boardSize - cornerSize/2, 
+            width: cornerSize, 
+            height: cornerSize 
+          }}
+        >
+          {renderZoneElements("corner.top-right")}
+        </div>
+        <div 
+          className="absolute flex items-center justify-center p-2"
+          style={{ 
+            top: topHeight + boardSize - cornerSize/2, 
+            left: leftWidth - cornerSize/2, 
+            width: cornerSize, 
+            height: cornerSize 
+          }}
+        >
+          {renderZoneElements("corner.bottom-left")}
+        </div>
+        <div 
+          className="absolute flex items-center justify-center p-2"
+          style={{ 
+            top: topHeight + boardSize - cornerSize/2, 
+            left: leftWidth + boardSize - cornerSize/2, 
+            width: cornerSize, 
+            height: cornerSize 
+          }}
+        >
+          {renderZoneElements("corner.bottom-right")}
+        </div>
+
+        {/* Board-adjacent zones */}
+        <div 
+          className="absolute flex gap-3 items-center justify-center p-2"
+          style={{
+            top: 0,
+            left: leftWidth,
+            width: boardSize,
+            height: topHeight,
+          }}
+        >
+          {renderZoneElements("board.top")}
+        </div>
+        
+        <div 
+          className="absolute flex gap-3 items-center justify-center p-2"
+          style={{
+            top: topHeight + boardSize,
+            left: leftWidth,
+            width: boardSize,
+            height: bottomHeight,
+          }}
+        >
+          {renderZoneElements("board.bottom")}
+        </div>
+
+        <div 
+          className="absolute flex flex-col gap-3 items-center justify-center p-2"
+          style={{
+            left: 0,
+            top: topHeight,
+            width: leftWidth,
+            height: boardSize,
+          }}
+        >
+          {renderZoneElements("board.left")}
+        </div>
+
+        <div 
+          className="absolute flex flex-col gap-3 items-center justify-center p-2"
+          style={{
+            left: leftWidth + boardSize,
+            top: topHeight,
+            width: rightWidth,
+            height: boardSize,
+          }}
+        >
+          {renderZoneElements("board.right")}
+        </div>
+
+        {/* Center board */}
+        <div 
+          className="absolute bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4 shadow-lg"
+          style={{
+            top: topHeight,
+            left: leftWidth,
+            width: boardSize,
+            height: boardSize,
+          }}
+        >
+          {renderZoneElements("board.center")}
+        </div>
+
+        {/* Floating elements */}
+        {Object.entries(layout.elements)
+          .filter(([_, element]) => element.zone === "floating")
+          .map(([elementId, element]) => (
+            <div
+              key={elementId}
+              className="absolute"
+              style={{
+                top: element.coordinates?.y,
+                left: element.coordinates?.x,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              {renderZoneElements("floating")}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Full-width footer at bottom of page */}
+      <div 
+        className="bg-white border-t border-black/10 flex dark:bg-zinc-800 dark:border-white/10"
+        style={{ height: footerHeight }}
+      >
+        <div className="flex-1 border-r border-black/10 flex items-center justify-center p-2 dark:border-white/10">
+          {renderZoneElements("footer.left")}
+        </div>
+        <div className="flex-1 border-r border-black/10 flex items-center justify-center p-2 dark:border-white/10">
+          {renderZoneElements("footer.center")}
+        </div>
+        <div className="flex-1 flex items-center justify-center p-2">
+          {renderZoneElements("footer.right")}
+        </div>
+      </div>
+    </div>
+  );
+}
 

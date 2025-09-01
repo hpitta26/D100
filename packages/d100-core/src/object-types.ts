@@ -20,6 +20,95 @@ export interface UILayout {
   gridArea?: string;
 }
 
+// ---------- Advanced Layout System ----------
+export type LayoutZone = 
+  | "board.center"
+  | "board.top" | "board.bottom" | "board.left" | "board.right"
+  | "corner.top-left" | "corner.top-right" | "corner.bottom-left" | "corner.bottom-right"
+  | "footer.left" | "footer.center" | "footer.right"
+  | "floating";
+
+export interface LayoutPosition {
+  zone: LayoutZone;
+  order?: number;
+  
+  // Positioning within zone
+  align?: "start" | "center" | "end" | "stretch";
+  justify?: "start" | "center" | "end" | "space-between" | "space-around";
+  
+  // Size constraints
+  size?: {
+    width?: number | "auto" | "fill" | `${number}%`;
+    height?: number | "auto" | "fill" | `${number}%`;
+    minWidth?: number;
+    minHeight?: number;
+    maxWidth?: number;
+    maxHeight?: number;
+  };
+  
+  // Spacing
+  margin?: {
+    top?: number;
+    right?: number; 
+    bottom?: number;
+    left?: number;
+  };
+  
+  // Floating position (only for floating zone)
+  coordinates?: {
+    x: number | `${number}%`;
+    y: number | `${number}%`;
+    anchor?: "board" | "viewport";
+  };
+  
+  // Responsive behavior
+  responsive?: {
+    mobile?: Partial<LayoutPosition>;
+    tablet?: Partial<LayoutPosition>;
+  };
+  
+  // Visual styling
+  style?: {
+    background?: string;
+    border?: string;
+    borderRadius?: number;
+    shadow?: boolean;
+    blur?: boolean;
+  };
+}
+
+export interface GameLayoutConfig {
+  // Board configuration
+  board: {
+    size: number | "auto";
+    aspectRatio?: number;
+  };
+  
+  // Zone sizing (optional overrides for standard zones)
+  zoneSizes?: {
+    "board.top"?: number;
+    "board.bottom"?: number; 
+    "board.left"?: number;
+    "board.right"?: number;
+    "corner.top-left"?: number;
+    "corner.top-right"?: number;
+    "corner.bottom-left"?: number;
+    "corner.bottom-right"?: number;
+    "footer"?: number; // Height of the footer
+  };
+  
+  // Simple element to zone mapping
+  elements: Record<string, {
+    zone: LayoutZone;
+    order?: number;
+    // Floating elements only
+    coordinates?: {
+      x: number | `${number}%`;
+      y: number | `${number}%`;
+    };
+  }>;
+}
+
 // ---------- Players ----------
 export interface Player {
   id: PlayerID;

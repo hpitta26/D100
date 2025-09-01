@@ -10,12 +10,13 @@ import {
   ID,
   Deck,
   Settings,
-} from "../../d100-core/src/object-types";
+} from "../../../d100-core/src/object-types";
 import {
   GameDefinition,
   createMatch as baseCreate,
-} from "../../d100-core/src/runtime";
-import { GameBox } from "../../d100-core/src/objects";
+} from "../../../d100-core/src/runtime";
+import { GameBox } from "../../../d100-core/src/objects";
+import { pokerLayout } from "./layout";
 
 /* ---------- IDs ---------- */
 const Z_COMMUNITY = "zone:poker:community" as ID;
@@ -276,6 +277,7 @@ const box = new GameBox(settings);
 export const PokerNLH: GameDefinition = {
   settings,
   box,
+  layout: pokerLayout,
 
   setup(s0) {
     let s = { ...s0 };
